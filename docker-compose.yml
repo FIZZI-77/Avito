@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    container_name: common_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: qwerty
+      POSTGRES_DB: avito
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d avito"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  migrator:
+    build: ./migrator
+    container_name: migrator
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./scheme:/migrations
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: "postgres://postgres:qwerty@db:5432/avito?sslmode=disable"
+    command: >
+      sh -c "
+        echo 'Running migrations...' &&
+        goose -dir /migrations up 
+      "
+  pull-request:
+    build: ./
+    container_name: pull-request-service
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: qwerty
+      DB_NAME: avito
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+volumes:
+  postgres_data:
