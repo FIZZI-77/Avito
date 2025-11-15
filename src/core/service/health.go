@@ -2,12 +2,12 @@ package service
 
 import "context"
 
-type healthService struct{}
+type HealthServiceStruct struct{}
 
-func NewHealthService() Health {
-	return &healthService{}
+func NewHealthService() *HealthServiceStruct {
+	return &HealthServiceStruct{}
 }
 
-func (h *healthService) Ping(ctx context.Context) error {
+func (h *HealthServiceStruct) Ping(ctx context.Context) error {
 	return nil
 }

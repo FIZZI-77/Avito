@@ -8,24 +8,24 @@ import (
 	"fmt"
 )
 
-type teamService struct {
+type TeamServiceStruct struct {
 	repo *repository.Repository
 }
 
-func NewTeamService(repo *repository.Repository) Team {
-	return &teamService{repo: repo}
+func NewTeamService(repo *repository.Repository) *TeamServiceStruct {
+	return &TeamServiceStruct{repo: repo}
 }
 
-func (s *teamService) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
-	existing, _ := s.repo.GetTeam(ctx, team.TeamName)
+func (t *TeamServiceStruct) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
+	existing, _ := t.repo.GetTeam(ctx, team.TeamName)
 	if existing != nil {
 		return nil, errors.New("service: team service:  CreateTeam(): team already exists")
 	}
-	return s.repo.CreateTeam(ctx, team)
+	return t.repo.CreateTeam(ctx, team)
 }
 
-func (s *teamService) GetTeam(ctx context.Context, teamName string) (*models.Team, error) {
-	team, err := s.repo.GetTeam(ctx, teamName)
+func (t *TeamServiceStruct) GetTeam(ctx context.Context, teamName string) (*models.Team, error) {
+	team, err := t.repo.GetTeam(ctx, teamName)
 	if err != nil {
 		return nil, fmt.Errorf("service: team service:  GetTeam(): team not found: %w", err)
 	}

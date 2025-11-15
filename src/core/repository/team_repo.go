@@ -8,23 +8,23 @@ import (
 	"fmt"
 )
 
-type teamRepository struct {
+type TeamRepo struct {
 	db *sql.DB
 }
 
-func NewTeamRepository(db *sql.DB) TeamRepository {
-	return &teamRepository{db: db}
+func NewTeamRepository(db *sql.DB) *TeamRepo {
+	return &TeamRepo{db: db}
 }
 
-func (r *teamRepository) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
+func (t *TeamRepo) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
 
-	_, err := r.db.ExecContext(ctx, `INSERT INTO teams (team_name) VALUES ($1)`, team.TeamName)
+	_, err := t.db.ExecContext(ctx, `INSERT INTO teams (team_name) VALUES ($1)`, team.TeamName)
 	if err != nil {
 		return nil, fmt.Errorf("repo: team_repo: CreateTeam(): %w", err)
 	}
 
 	for _, m := range team.Members {
-		_, err := r.db.ExecContext(ctx,
+		_, err := t.db.ExecContext(ctx,
 			`INSERT INTO users (user_id, username, team_name, is_active) VALUES ($1, $2, $3, $4)`,
 			m.UserID, m.Username, team.TeamName, m.IsActive)
 		if err != nil {
@@ -35,12 +35,12 @@ func (r *teamRepository) CreateTeam(ctx context.Context, team *models.Team) (*mo
 	return team, nil
 }
 
-func (r *teamRepository) GetTeam(ctx context.Context, teamName string) (*models.Team, error) {
+func (t *TeamRepo) GetTeam(ctx context.Context, teamName string) (*models.Team, error) {
 	team := &models.Team{
 		TeamName: teamName,
 	}
 
-	rows, err := r.db.QueryContext(ctx,
+	rows, err := t.db.QueryContext(ctx,
 		`SELECT user_id, username, is_active FROM users WHERE team_name = $1`, teamName)
 	if err != nil {
 		return nil, fmt.Errorf("repo: team_repo: GetTeam(): %w", err)

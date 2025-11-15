@@ -8,25 +8,25 @@ import (
 	"fmt"
 )
 
-type userRepository struct {
+type UserRepo struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) UserRepository {
-	return &userRepository{db: db}
+func NewUserRepository(db *sql.DB) *UserRepo {
+	return &UserRepo{db: db}
 }
 
-func (r *userRepository) SetIsActive(ctx context.Context, userID string, isActive bool) (*models.User, error) {
-	_, err := r.db.ExecContext(ctx, `UPDATE users SET is_active=$1 WHERE user_id=$2`, isActive, userID)
+func (u *UserRepo) SetIsActive(ctx context.Context, userID string, isActive bool) (*models.User, error) {
+	_, err := u.db.ExecContext(ctx, `UPDATE users SET is_active=$1 WHERE user_id=$2`, isActive, userID)
 	if err != nil {
 		return nil, fmt.Errorf("repo: user_repo: SetIsActive(): %w", err)
 	}
-	return r.GetUserByID(ctx, userID)
+	return u.GetUserByID(ctx, userID)
 }
 
-func (r *userRepository) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
+func (u *UserRepo) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
 	user := &models.User{}
-	row := r.db.QueryRowContext(ctx,
+	row := u.db.QueryRowContext(ctx,
 		`SELECT user_id, username, team_name, is_active FROM users WHERE user_id=$1`, userID)
 	if err := row.Scan(&user.UserID, &user.Username, &user.TeamName, &user.IsActive); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -37,7 +37,7 @@ func (r *userRepository) GetUserByID(ctx context.Context, userID string) (*model
 	return user, nil
 }
 
-func (r *userRepository) GetReviewAssignments(ctx context.Context, userID string) ([]models.PullRequestShort, error) {
+func (u *UserRepo) GetReviewAssignments(ctx context.Context, userID string) ([]models.PullRequestShort, error) {
 	query := `
 		SELECT pr.pull_request_id, pr.pull_request_name, pr.author_id, pr.status
 		FROM pull_requests pr
@@ -46,7 +46,7 @@ func (r *userRepository) GetReviewAssignments(ctx context.Context, userID string
 		WHERE prr.reviewer_id = $1
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := u.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("repo: user_repo: GetReviewAssignments(): %w", err)
 	}

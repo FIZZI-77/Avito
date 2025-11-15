@@ -10,23 +10,23 @@ import (
 	"time"
 )
 
-type pullRequestService struct {
+type PullRequestServiceStruct struct {
 	repo *repository.Repository
 }
 
-func NewPullRequestService(repo *repository.Repository) PullRequest {
-	return &pullRequestService{
+func NewPullRequestService(repo *repository.Repository) *PullRequestServiceStruct {
+	return &PullRequestServiceStruct{
 		repo: repo,
 	}
 }
 
-func (s *pullRequestService) CreatePullRequest(ctx context.Context, req *models.CreatePullRequestRequest) (*models.PullRequest, error) {
-	author, err := s.repo.GetUserByID(ctx, req.AuthorID)
+func (p *PullRequestServiceStruct) CreatePullRequest(ctx context.Context, req *models.CreatePullRequestRequest) (*models.PullRequest, error) {
+	author, err := p.repo.GetUserByID(ctx, req.AuthorID)
 	if err != nil {
 		return nil, fmt.Errorf("service: pq_service: CreatePullRequest(): author not found: %w", err)
 	}
 
-	team, err := s.repo.GetTeam(ctx, author.TeamName)
+	team, err := p.repo.GetTeam(ctx, author.TeamName)
 	if err != nil {
 		return nil, fmt.Errorf("service: pq_service: CreatePullRequest(): team not found: %w", err)
 	}
@@ -48,11 +48,11 @@ func (s *pullRequestService) CreatePullRequest(ctx context.Context, req *models.
 		}
 	}
 
-	return s.repo.Create(ctx, req, assigned)
+	return p.repo.Create(ctx, req, assigned)
 }
 
-func (s *pullRequestService) MergePullRequest(ctx context.Context, req *models.MergePullRequestRequest) (*models.PullRequest, error) {
-	pr, err := s.repo.GetByID(ctx, req.PullRequestID)
+func (p *PullRequestServiceStruct) MergePullRequest(ctx context.Context, req *models.MergePullRequestRequest) (*models.PullRequest, error) {
+	pr, err := p.repo.GetByID(ctx, req.PullRequestID)
 	if err != nil {
 		return nil, fmt.Errorf("service: pq_service: MergePullRequest(): pr not found: %w", err)
 	}
@@ -61,11 +61,11 @@ func (s *pullRequestService) MergePullRequest(ctx context.Context, req *models.M
 		return pr, nil
 	}
 
-	return s.repo.Merge(ctx, req.PullRequestID)
+	return p.repo.Merge(ctx, req.PullRequestID)
 }
 
-func (s *pullRequestService) ReassignReviewer(ctx context.Context, req *models.ReassignRequest) (*models.PullRequestReassignResponse, error) {
-	pr, err := s.repo.GetByID(ctx, req.PullRequestID)
+func (p *PullRequestServiceStruct) ReassignReviewer(ctx context.Context, req *models.ReassignRequest) (*models.PullRequestReassignResponse, error) {
+	pr, err := p.repo.GetByID(ctx, req.PullRequestID)
 	if err != nil {
 		return nil, fmt.Errorf("service: pq_service: ReassignReviewer(): pr not found: %w", err)
 	}
@@ -85,12 +85,12 @@ func (s *pullRequestService) ReassignReviewer(ctx context.Context, req *models.R
 		return nil, errors.New("service: pq_service: ReassignReviewer(): reviewer is not assigned to this PR")
 	}
 
-	user, err := s.repo.GetUserByID(ctx, req.OldUserID)
+	user, err := p.repo.GetUserByID(ctx, req.OldUserID)
 	if err != nil {
 		return nil, fmt.Errorf("service: pq_service: ReassignReviewer(): old reviewer not found: %w", err)
 	}
 
-	team, err := s.repo.GetTeam(ctx, user.TeamName)
+	team, err := p.repo.GetTeam(ctx, user.TeamName)
 	if err != nil {
 		return nil, fmt.Errorf("service: pq_service: ReassignReviewer(): team not found: %w", err)
 	}
@@ -118,7 +118,7 @@ func (s *pullRequestService) ReassignReviewer(ctx context.Context, req *models.R
 	rand.Seed(time.Now().UnixNano())
 	newReviewer := candidates[rand.Intn(len(candidates))]
 
-	pr, err = s.repo.ReassignReviewer(ctx, req.PullRequestID, req.OldUserID, newReviewer)
+	pr, err = p.repo.ReassignReviewer(ctx, req.PullRequestID, req.OldUserID, newReviewer)
 	if err != nil {
 		return nil, err
 	}

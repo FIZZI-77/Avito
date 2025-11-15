@@ -6,22 +6,22 @@ import (
 	"context"
 )
 
-type userService struct {
+type UserServiceStruct struct {
 	repo *repository.Repository
 }
 
-func NewUserService(repo *repository.Repository) User {
-	return &userService{
+func NewUserService(repo *repository.Repository) *UserServiceStruct {
+	return &UserServiceStruct{
 		repo: repo,
 	}
 }
 
-func (s *userService) SetIsActive(ctx context.Context, req *models.SetIsActiveRequest) (*models.User, error) {
-	return s.repo.SetIsActive(ctx, req.UserID, req.IsActive)
+func (u *UserServiceStruct) SetIsActive(ctx context.Context, req *models.SetIsActiveRequest) (*models.User, error) {
+	return u.repo.SetIsActive(ctx, req.UserID, req.IsActive)
 }
 
-func (s *userService) GetReviewAssignments(ctx context.Context, userID string) (*models.UserReviewsResponse, error) {
-	prs, err := s.repo.GetReviewAssignments(ctx, userID)
+func (u *UserServiceStruct) GetReviewAssignments(ctx context.Context, userID string) (*models.UserReviewsResponse, error) {
+	prs, err := u.repo.GetReviewAssignments(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

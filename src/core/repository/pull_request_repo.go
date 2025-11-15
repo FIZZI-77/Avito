@@ -9,18 +9,18 @@ import (
 	"time"
 )
 
-type pullRequestRepository struct {
+type PullRequestRepo struct {
 	db *sql.DB
 }
 
-func NewPullRequestRepository(db *sql.DB) PullRequestRepository {
-	return &pullRequestRepository{db: db}
+func NewPullRequestRepository(db *sql.DB) *PullRequestRepo {
+	return &PullRequestRepo{db: db}
 }
 
-func (r *pullRequestRepository) Create(ctx context.Context, req *models.CreatePullRequestRequest, assignedReviewers []string) (*models.PullRequest, error) {
+func (p *PullRequestRepo) Create(ctx context.Context, req *models.CreatePullRequestRequest, assignedReviewers []string) (*models.PullRequest, error) {
 	createdAt := time.Now()
 
-	_, err := r.db.ExecContext(ctx,
+	_, err := p.db.ExecContext(ctx,
 		`INSERT INTO pull_requests (pull_request_id, pull_request_name, author_id, status, created_at)
 		 VALUES ($1, $2, $3, $4, $5)`,
 		req.PullRequestID, req.PullRequestName, req.AuthorID, models.StatusOpen, createdAt)
@@ -29,7 +29,7 @@ func (r *pullRequestRepository) Create(ctx context.Context, req *models.CreatePu
 	}
 
 	for _, reviewerID := range assignedReviewers {
-		_, err := r.db.ExecContext(ctx,
+		_, err := p.db.ExecContext(ctx,
 			`INSERT INTO pull_request_reviewers (pull_request_id, reviewer_id)
 			 VALUES ($1, $2)`, req.PullRequestID, reviewerID)
 		if err != nil {
@@ -47,8 +47,8 @@ func (r *pullRequestRepository) Create(ctx context.Context, req *models.CreatePu
 	}, nil
 }
 
-func (r *pullRequestRepository) GetByID(ctx context.Context, pullRequestID string) (*models.PullRequest, error) {
-	row := r.db.QueryRowContext(ctx,
+func (p *PullRequestRepo) GetByID(ctx context.Context, pullRequestID string) (*models.PullRequest, error) {
+	row := p.db.QueryRowContext(ctx,
 		`SELECT pull_request_id, pull_request_name, author_id, status, created_at, merged_at
 		 FROM pull_requests
 		 WHERE pull_request_id=$1`, pullRequestID)
@@ -61,7 +61,7 @@ func (r *pullRequestRepository) GetByID(ctx context.Context, pullRequestID strin
 		return nil, fmt.Errorf("repo: pq_repo: GetByID(): %w", err)
 	}
 
-	rows, err := r.db.QueryContext(ctx,
+	rows, err := p.db.QueryContext(ctx,
 		`SELECT reviewer_id FROM pull_request_reviewers WHERE pull_request_id=$1`, pullRequestID)
 	if err != nil {
 		return nil, fmt.Errorf("repo: pq_repo: GetByID(): reviewers: %w", err)
@@ -81,34 +81,34 @@ func (r *pullRequestRepository) GetByID(ctx context.Context, pullRequestID strin
 	return &pr, nil
 }
 
-func (r *pullRequestRepository) ReassignReviewer(ctx context.Context, pullRequestID, oldUserID, newUserID string) (*models.PullRequest, error) {
-	_, err := r.db.ExecContext(ctx,
+func (p *PullRequestRepo) ReassignReviewer(ctx context.Context, pullRequestID, oldUserID, newUserID string) (*models.PullRequest, error) {
+	_, err := p.db.ExecContext(ctx,
 		`DELETE FROM pull_request_reviewers WHERE pull_request_id=$1 AND reviewer_id=$2`,
 		pullRequestID, oldUserID)
 	if err != nil {
 		return nil, fmt.Errorf("repo: pq_repo: ReassignReviewer(): delete old: %w", err)
 	}
 
-	_, err = r.db.ExecContext(ctx,
+	_, err = p.db.ExecContext(ctx,
 		`INSERT INTO pull_request_reviewers (pull_request_id, reviewer_id) VALUES ($1, $2)`,
 		pullRequestID, newUserID)
 	if err != nil {
 		return nil, fmt.Errorf("repo: pq_repo: ReassignReviewer(): insert new: %w", err)
 	}
 
-	return r.GetByID(ctx, pullRequestID)
+	return p.GetByID(ctx, pullRequestID)
 }
 
-func (r *pullRequestRepository) Merge(ctx context.Context, pullRequestID string) (*models.PullRequest, error) {
+func (p *PullRequestRepo) Merge(ctx context.Context, pullRequestID string) (*models.PullRequest, error) {
 	mergedAt := time.Now()
-	_, err := r.db.ExecContext(ctx,
+	_, err := p.db.ExecContext(ctx,
 		`UPDATE pull_requests SET status=$1, merged_at=$2 WHERE pull_request_id=$3`,
 		models.StatusMerged, mergedAt, pullRequestID)
 	if err != nil {
 		return nil, fmt.Errorf("repo: pq_repo: Merge(): %w", err)
 	}
 
-	pr, err := r.GetByID(ctx, pullRequestID)
+	pr, err := p.GetByID(ctx, pullRequestID)
 	if err != nil {
 		return nil, fmt.Errorf("repo: pq_repo: Merge(): %w", err)
 	}
