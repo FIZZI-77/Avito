@@ -17,21 +17,35 @@ func NewTeamRepository(db *sql.DB) *TeamRepo {
 }
 
 func (t *TeamRepo) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
-
-	_, err := t.db.ExecContext(ctx, `INSERT INTO teams (team_name) VALUES ($1)`, team.TeamName)
+	tx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
+		return nil, fmt.Errorf("repo: team_repo: begin: %w", err)
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO teams (team_name) VALUES ($1)`, team.TeamName)
+	if err != nil {
+		errTransaction := tx.Rollback()
+		if errTransaction != nil {
+			return nil, fmt.Errorf("repo: team_repo: rollback faild: %w", errTransaction)
+		}
 		return nil, fmt.Errorf("repo: team_repo: CreateTeam(): %w", err)
 	}
 
 	for _, m := range team.Members {
-		_, err := t.db.ExecContext(ctx,
+		_, err = tx.ExecContext(ctx,
 			`INSERT INTO users (user_id, username, team_name, is_active) VALUES ($1, $2, $3, $4)`,
 			m.UserID, m.Username, team.TeamName, m.IsActive)
 		if err != nil {
+			errTransaction := tx.Rollback()
+			if errTransaction != nil {
+				return nil, fmt.Errorf("repo: team_repo: rollback faild: %w", errTransaction)
+			}
 			return nil, fmt.Errorf("repo: team_repo: CreateTeam(): insert member: %w", err)
 		}
 	}
 
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("repo: team_repo: commit faild: %w", err)
+	}
 	return team, nil
 }
 
